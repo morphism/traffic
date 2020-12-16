@@ -48,7 +48,8 @@ This behavior enables piping input at realistic and interesting rates.
 
 The `-config FILENAME` option should given a filename contain either
 JSON or YAML that represents a configuration.  For now, see the [Go
-documentation]() to see how to provide a configuration.
+documentation](https://godoc.org/github.com/morphism/traffic) to see
+how to provide a configuration.
 
 Note pipes will typically involve buffering.  Consult some
 [suggestions](https://unix.stackexchange.com/questions/25372/turn-off-buffering-in-pipe)
