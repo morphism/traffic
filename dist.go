@@ -102,7 +102,7 @@ func (d *Dist) Validate() error {
 	}
 
 	if n != 1 {
-		return fmt.Errorf("saw %d underlying distributions (%#v) instead of exactly one", d, n)
+		return fmt.Errorf("saw %d underlying distributions instead of exactly one", n)
 	}
 
 	return nil

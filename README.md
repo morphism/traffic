@@ -1,7 +1,11 @@
 `traffic`: A simple command-line tool that reads and writes lines at
 configurable rates.
 
-## Example
+If you have [Go](https://golang.org/) installed:
+
+```Shell
+go get github.com/morphism/traffic/...
+```
 
 For testing and demos, `traffic` can run in a mode that just emits
 lines to `stdout`:
