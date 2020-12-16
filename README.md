@@ -7,6 +7,10 @@ If you have [Go](https://golang.org/) installed:
 go get github.com/morphism/traffic/...
 ```
 
+Alternately you might find a
+[release](https://github.com/morphism/traffic/releases) that's
+suitable.
+
 For testing and demos, `traffic` can run in a mode that just emits
 lines to `stdout`:
 
