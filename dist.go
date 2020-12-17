@@ -10,6 +10,10 @@ import (
 // Dist should represent a single underlying distribution in a manner
 // that makes deserialization type-safe.
 type Dist struct {
+	// Scale, which defaults to 1, is multiplied by Dist.Rand() to
+	// give the number of events for a tick.
+	Scale float64
+
 	Const        *Const               `json:",omitempty"`
 	AlphaStable  *distuv.AlphaStable  `json:",omitempty"`
 	Bernoulli    *distuv.Bernoulli    `json:",omitempty"`

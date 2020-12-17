@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -30,10 +31,10 @@ func run() error {
 
 		interval       = flag.Duration("interval", time.Second, "Tick duration")
 		seed           = flag.Uint64("seed", 0, "Seed for the RNG (defaults to current time in nanoseconds)")
-		nowarn         = flag.Bool("no-warn", false, "Turn off warnings")
 		configFilename = flag.String("config", "traffic.json", "Name of configuration file")
 		limit          = flag.Uint64("limit", 0, "Number of ticks (0 means run forever)")
 		ts             = flag.Bool("timestamps", false, "Prefix each line with current timestamp")
+		logging        = flag.Bool("log", false, "Turn on some logging output")
 
 		s traffic.System
 		t = int64(0)
@@ -71,7 +72,7 @@ func run() error {
 		}
 	}
 
-	s.NoWarn = *nowarn
+	s.Log = *logging
 
 	if *seed == 0 {
 		*seed = uint64(time.Now().UnixNano())
@@ -87,6 +88,7 @@ LOOP:
 		if 0 < *limit && *limit <= uint64(t) {
 			break
 		}
+		emitted := 0
 		for _, n := range s.Counts(t) {
 			for i := 0; i < int(n); i++ {
 				line, err := in.ReadString('\n')
@@ -95,11 +97,16 @@ LOOP:
 				} else {
 					fmt.Printf("%s", line)
 				}
+				emitted++
 				if err == io.EOF {
 					break LOOP
 				}
 			}
 		}
+		if s.Log {
+			log.Printf("traffic %d total %d", t, emitted)
+		}
+
 		t++
 		time.Sleep(*interval)
 	}

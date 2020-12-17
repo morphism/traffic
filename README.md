@@ -31,7 +31,7 @@ Output:
 That kind of output makes for good input for real `traffic` use:
 
 ```Shell
-traffic -test-source | traffic -config demo
+traffic -test-source | traffic -config traffic.json -log
 ```
 
 The second `traffic` will emit lines from its `stdin` at highly

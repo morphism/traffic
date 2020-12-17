@@ -5,14 +5,12 @@
 	"A": {
 	    "From": {"Const":0},
 	    "To": {"Const":2},
-	    "Scale": 1,
-	    "N": {"Const":2}
+	    "D": {"Const":2}
 	},
 	"B": {
 	    "From": {"Const":10},
 	    "To": {"Const":30},
-	    "Scale": 1,
-	    "N": {
+	    "D": {
 		"Normal": {
 		    "Mu": 50,
 		    "Sigma": 20
@@ -22,8 +20,7 @@
 	"C": {
 	    "From": {"Const":20},
 	    "To": {"Const":50},
-	    "Scale": 1,
-	    "N": {
+	    "D": {
 		"Uniform": {
 		    "Min": 5,
 		    "Max": 15
@@ -33,8 +30,7 @@
 	"D": {
 	    "From": {"Const":0},
 	    "To": {"Const":60},
-	    "Scale": 1,
-	    "N": {
+	    "D": {
 		"Normal": {
 		    "Mu": 5,
 		    "Sigma": 15
@@ -44,12 +40,16 @@
 	"E": {
 	    "From": {"Const":5},
 	    "To": {"Const":10},
-	    "Scale": 1,
-	    "N": {
+	    "D": {
 		"Exponential": {
 		    "Rate": 5
 		}
 	    }
+	},
+	"F": {
+	    "From": {"Const":0},
+	    "To": {"Const":60},
+	    "JS": "10 + 5 * Math.sin(Math.PI*r/10)"
 	}
     }
 }

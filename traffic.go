@@ -2,26 +2,83 @@ package traffic
 
 import (
 	"fmt"
-	"os"
+	"log"
 	"time"
 
+	"github.com/dop251/goja"
 	"golang.org/x/exp/rand"
 )
 
 // Source represents a source of events in a given time range.
 type Source struct {
 	// From gives the starting tick (remainder) for this source.
+	//
+	// This value is sampled at each new System.Width tick.
 	From Dist
 
+	from int64
+
 	// To gives the last tick (remainder, exclusive) for this source.
+	//
+	// This value is sampled at each new System.Width tick.
 	To Dist
 
-	// Scale is multiplied by N.Rand() to give the number of
-	// events for tick.
-	Scale float64
+	to int64
 
-	// N returns the number of events per 1/Scale.
-	N Dist
+	// D sample times D.Scale gives the number of events per tick.
+	D *Dist
+
+	// JS is optional Javascript code that should result in the
+	// number of events for a tick.
+	//
+	// The variable 't' and 'r', which is 't' mod the system
+	// Width, are in the Javascript environment when this string
+	// of code is evaluated.
+	//
+	// The environment persists through the run.
+	JS string
+
+	vm *goja.Runtime
+}
+
+func (s *Source) Reset(t, r int64) {
+	s.from = int64(s.From.Rand())
+	s.to = int64(s.To.Rand())
+}
+
+func (s *Source) Count(t, r int64) int64 {
+	if s.D != nil {
+		n := int64(s.D.Scale * s.D.Rand())
+		if n < 0 {
+			return 0
+		}
+		return n
+	}
+
+	s.vm.Set("t", t)
+	s.vm.Set("r", r)
+	v, err := s.vm.RunString(s.JS)
+	if err != nil {
+		panic(err)
+	}
+
+	var n int64
+	x := v.Export()
+
+	switch vv := x.(type) {
+	case int64:
+		n = vv
+	case float64:
+		n = int64(vv)
+	default:
+		panic(fmt.Errorf("code returned %#v (%T)", vv, vv))
+	}
+
+	if n < 0 {
+		return 0
+	}
+
+	return n
 }
 
 // System is a set of event sources.
@@ -37,8 +94,8 @@ type System struct {
 	// clock resets to zero and continues.
 	Width int64
 
-	// NoWarn turns off some possible warnings.
-	NoWarn bool
+	// Log turns on some logging output.
+	Log bool
 }
 
 // Init validates distributions and initializes RNGs.
@@ -58,16 +115,29 @@ func (s *System) Init(r rand.Source) error {
 			return wrap(err)
 		}
 		src.To.SetSrc(r)
-		if err := src.N.Validate(); err != nil {
-			return wrap(err)
-		}
-		src.N.SetSrc(r)
 
-		if src.Scale == 0 {
-			if !s.NoWarn {
-				fmt.Fprintf(os.Stderr, "warning: %s Scale is 0", name)
+		if src.D != nil {
+			if err := src.D.Validate(); err != nil {
+				return wrap(err)
 			}
+			if src.D.Scale == 0 {
+				src.D.Scale = 1
+			}
+			src.D.SetSrc(r)
 		}
+
+		if src.D == nil && src.JS == "" {
+			return wrap(fmt.Errorf("No D or JS"))
+		}
+
+		if src.D != nil && src.JS != "" {
+			return wrap(fmt.Errorf("Can't have both N and JS"))
+		}
+
+		if src.JS != "" {
+			src.vm = goja.New()
+		}
+
 	}
 
 	return nil
@@ -81,17 +151,18 @@ func (s *System) Counts(t int64) map[string]int64 {
 		counts = make(map[string]int64, len(s.Sources))
 	)
 	for name, d := range s.Sources {
-		var (
-			from = int64(d.From.Rand())
-			to   = int64(d.To.Rand())
-		)
-		if r < from || to <= r {
+		if r == 0 {
+			d.Reset(t, r)
+		}
+		if r < d.from || d.to <= r {
 			continue
 		}
-		n := int64(d.Scale * d.N.Rand())
-		if 0 < n {
-			counts[name] += n
+
+		n := d.Count(t, r)
+		if s.Log {
+			log.Printf("traffic %d %s %d", t, name, n)
 		}
+		counts[name] += n
 	}
 	return counts
 }
