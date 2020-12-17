@@ -18,6 +18,7 @@
 	    }
 	},
 	"C": {
+	    "Disable": true,
 	    "From": {"Const":20},
 	    "To": {"Const":50},
 	    "D": {
@@ -45,7 +46,9 @@
 	    }
 	},
 	"F": {
-	    "JS": "10 + 5 * Math.sin(Math.PI*r/10)"
+	    "Scale": 2,
+	    "AllowNegatives": true,
+	    "JS": "5 + 6 * Math.sin(Math.PI*r/10)"
 	}
     }
 }

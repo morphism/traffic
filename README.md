@@ -42,6 +42,8 @@ associated effective time ranges.  Thanks to
 distributions](https://godoc.org/gonum.org/v1/gonum/stat/distuv) is
 available.
 
+See [traffic.json](traffic.json) for an example configuration.
+
 At every tick (every second by default), `traffic` finds the active
 distributions and samples counts of lines to forward during that tick.
 This behavior enables piping input at realistic and interesting rates.

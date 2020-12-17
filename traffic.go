@@ -29,6 +29,19 @@ type Source struct {
 
 	to int64
 
+	// Scale, which defaults to 1, is multiplied by Dist.Rand() or
+	// the result of evaluating JS to give the number of events
+	// for a tick.
+	Scale float64
+
+	// AllowNegatives, if false (the default), will treat a
+	// negative number from Dist.Rand() or the result of
+	// evaluating JS as zero.
+	AllowNegatives bool
+
+	// Disable will remove this Source from consideration.
+	Disable bool
+
 	// D sample times D.Scale gives the number of events per tick.
 	D *Dist
 
@@ -57,32 +70,32 @@ func (s *Source) Reset(width, t, r int64) {
 }
 
 func (s *Source) Count(t, r int64) int64 {
+	var x float64
 	if s.D != nil {
-		n := int64(s.D.Scale * s.D.Rand())
-		if n < 0 {
-			return 0
+		x = s.D.Rand()
+	} else {
+		s.vm.Set("t", t)
+		s.vm.Set("r", r)
+		v, err := s.vm.RunString(s.JS)
+		if err != nil {
+			panic(err)
 		}
-		return n
+
+		x := v.Export()
+
+		switch vv := x.(type) {
+		case int64:
+			x = float64(vv)
+		case float64:
+			x = vv
+		default:
+			panic(fmt.Errorf("code returned %#v (%T)", vv, vv))
+		}
 	}
 
-	s.vm.Set("t", t)
-	s.vm.Set("r", r)
-	v, err := s.vm.RunString(s.JS)
-	if err != nil {
-		panic(err)
-	}
+	x *= s.Scale
 
-	var n int64
-	x := v.Export()
-
-	switch vv := x.(type) {
-	case int64:
-		n = vv
-	case float64:
-		n = int64(vv)
-	default:
-		panic(fmt.Errorf("code returned %#v (%T)", vv, vv))
-	}
+	n := int64(x)
 
 	if n < 0 {
 		return 0
@@ -137,12 +150,16 @@ func (s *System) Init(r rand.Source) error {
 			src.To.SetSrc(r)
 		}
 
+		if src.Scale == 0 {
+			src.Scale = 1
+		}
+		if src.Disable {
+			src.Scale = 0
+		}
+
 		if src.D != nil {
 			if err := src.D.Validate(); err != nil {
 				return wrap(err)
-			}
-			if src.D.Scale == 0 {
-				src.D.Scale = 1
 			}
 			src.D.SetSrc(r)
 		}
