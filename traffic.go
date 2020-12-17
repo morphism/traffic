@@ -13,15 +13,19 @@ import (
 type Source struct {
 	// From gives the starting tick (remainder) for this source.
 	//
+	// Defaults to zero.
+	//
 	// This value is sampled at each new System.Width tick.
-	From Dist
+	From *Dist
 
 	from int64
 
 	// To gives the last tick (remainder, exclusive) for this source.
 	//
+	// Defaults to System.Width.
+	//
 	// This value is sampled at each new System.Width tick.
-	To Dist
+	To *Dist
 
 	to int64
 
@@ -41,9 +45,15 @@ type Source struct {
 	vm *goja.Runtime
 }
 
-func (s *Source) Reset(t, r int64) {
-	s.from = int64(s.From.Rand())
-	s.to = int64(s.To.Rand())
+func (s *Source) Reset(width, t, r int64) {
+	if s.From != nil {
+		s.from = int64(s.From.Rand())
+	}
+	if s.To == nil {
+		s.to = width
+	} else {
+		s.to = int64(s.To.Rand())
+	}
 }
 
 func (s *Source) Count(t, r int64) int64 {
@@ -90,6 +100,8 @@ type System struct {
 
 	// Width is the modulus for the ticker.
 	//
+	// Defaults to 60.
+	//
 	// This value is effectively the largest tick, after which the
 	// clock resets to zero and continues.
 	Width int64
@@ -103,18 +115,27 @@ func (s *System) Init(r rand.Source) error {
 	if r == nil {
 		r = rand.NewSource(uint64(time.Now().UnixNano()))
 	}
+
+	if s.Width == 0 {
+		s.Width = 60
+	}
+
 	for name, src := range s.Sources {
 		wrap := func(err error) error {
 			return fmt.Errorf("in '%s': %v", name, err)
 		}
-		if err := src.From.Validate(); err != nil {
-			return wrap(err)
+		if src.From != nil {
+			if err := src.From.Validate(); err != nil {
+				return wrap(err)
+			}
+			src.From.SetSrc(r)
 		}
-		src.From.SetSrc(r)
-		if err := src.To.Validate(); err != nil {
-			return wrap(err)
+		if src.To != nil {
+			if err := src.To.Validate(); err != nil {
+				return wrap(err)
+			}
+			src.To.SetSrc(r)
 		}
-		src.To.SetSrc(r)
 
 		if src.D != nil {
 			if err := src.D.Validate(); err != nil {
@@ -152,7 +173,7 @@ func (s *System) Counts(t int64) map[string]int64 {
 	)
 	for name, d := range s.Sources {
 		if r == 0 {
-			d.Reset(t, r)
+			d.Reset(s.Width, t, r)
 		}
 		if r < d.from || d.to <= r {
 			continue

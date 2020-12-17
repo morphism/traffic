@@ -28,8 +28,6 @@
 	    }
 	},
 	"D": {
-	    "From": {"Const":0},
-	    "To": {"Const":60},
 	    "D": {
 		"Normal": {
 		    "Mu": 5,
@@ -47,8 +45,6 @@
 	    }
 	},
 	"F": {
-	    "From": {"Const":0},
-	    "To": {"Const":60},
 	    "JS": "10 + 5 * Math.sin(Math.PI*r/10)"
 	}
     }
