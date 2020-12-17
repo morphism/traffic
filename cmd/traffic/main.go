@@ -20,6 +20,8 @@ import (
 func main() {
 	// script -q -c "traffic -test-source" /dev/null | traffic
 
+	traffic.LogRFC3339Nano()
+
 	if err := run(); err != nil {
 		panic(err)
 	}
