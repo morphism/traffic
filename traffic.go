@@ -121,6 +121,12 @@ type System struct {
 
 	// Log turns on some logging output.
 	Log bool
+
+	// Scale is multiplied by total count for a tick to give the
+	// actual reported total.
+	//
+	// Defaults to one.
+	Scale float64
 }
 
 // Init validates distributions and initializes RNGs.
@@ -131,6 +137,10 @@ func (s *System) Init(r rand.Source) error {
 
 	if s.Width == 0 {
 		s.Width = 60
+	}
+
+	if s.Scale == 0 {
+		s.Scale = 1
 	}
 
 	for name, src := range s.Sources {
@@ -183,10 +193,11 @@ func (s *System) Init(r rand.Source) error {
 
 // Counts is the primary method, which returns the number of events by
 // source.
-func (s *System) Counts(t int64) map[string]int64 {
+func (s *System) Counts(t int64) (int64, map[string]int64) {
 	var (
 		r      = t % s.Width
 		counts = make(map[string]int64, len(s.Sources))
+		total  int64
 	)
 	for name, d := range s.Sources {
 		if r == 0 {
@@ -201,6 +212,7 @@ func (s *System) Counts(t int64) map[string]int64 {
 			log.Printf("traffic %d %s %d", t, name, n)
 		}
 		counts[name] += n
+		total += n
 	}
-	return counts
+	return int64(s.Scale * float64(total)), counts
 }

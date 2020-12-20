@@ -37,6 +37,7 @@ func run() error {
 		limit          = flag.Uint64("limit", 0, "Number of ticks (0 means run forever)")
 		ts             = flag.Bool("timestamps", false, "Prefix each line with current timestamp")
 		logging        = flag.Bool("log", false, "Turn on some logging output")
+		warn           = flag.Duration("warn", time.Second, "Log warning if lagging for more than this duration")
 
 		s traffic.System
 		t = int64(0)
@@ -52,6 +53,8 @@ func run() error {
 		for {
 			fmt.Printf("%09d %s\n", i, time.Now().UTC().Format(time.RFC3339Nano))
 			i++
+			ms := time.Duration(rand.Intn(100)) * time.Millisecond
+			time.Sleep(ms)
 		}
 		return nil // Won't get here.
 	}
@@ -85,24 +88,40 @@ func run() error {
 		return err
 	}
 
+	tick := time.Now().UTC()
+
+	wait := func(n int) {
+		// Crudely wait for about *interval/n.
+		//
+		// ToDo: Use a better algorithm and distribution.
+		var (
+			max    = 2 * float64(*interval) / float64(n)
+			sample = rand.Float64()
+			d      = time.Duration(max * sample)
+		)
+		time.Sleep(d)
+	}
+
 LOOP:
 	for {
 		if 0 < *limit && *limit <= uint64(t) {
 			break
 		}
 		emitted := 0
-		for _, n := range s.Counts(t) {
-			for i := 0; i < int(n); i++ {
-				line, err := in.ReadString('\n')
+		n, _ := s.Counts(t)
+		for i := 0; i < int(n); i++ {
+			line, err := in.ReadString('\n')
+			if 0 < len(line) && err != io.EOF {
+				wait(int(n))
 				if *ts {
 					fmt.Printf("%s %s", time.Now().UTC().Format(time.RFC3339Nano), line)
 				} else {
 					fmt.Printf("%s", line)
 				}
-				emitted++
-				if err == io.EOF {
-					break LOOP
-				}
+			}
+			emitted++
+			if err == io.EOF {
+				break LOOP
 			}
 		}
 		if s.Log {
@@ -110,7 +129,21 @@ LOOP:
 		}
 
 		t++
-		time.Sleep(*interval)
+
+		// Compute how to to pause then pause for that long.
+		var (
+			target = tick.Add(*interval)
+			now    = time.Now().UTC()
+			delta  = target.Sub(now)
+		)
+		tick = now
+		if delta < -*warn {
+			log.Printf("warning: lag: %v", -delta)
+		}
+		if delta < 0 {
+			delta = 0
+		}
+		time.Sleep(delta)
 	}
 
 	return nil
