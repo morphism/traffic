@@ -91,11 +91,11 @@ func run() error {
 	tick := time.Now().UTC()
 
 	wait := func(n int) {
-		// Crudely wait for about *interval/n.
+		// Crudely wait for about *interval/(n+1.
 		//
 		// ToDo: Use a better algorithm and distribution.
 		var (
-			max    = 2 * float64(*interval) / float64(n)
+			max    = 2 * float64(*interval) / float64(n+1)
 			sample = rand.Float64()
 			d      = time.Duration(max * sample)
 		)
